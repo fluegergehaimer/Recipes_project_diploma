@@ -14,7 +14,7 @@
 -Git
 -GitActions
 -Gunicorn
-
+```
 
 ## Как развернуть проект:
 Ссылка на проект: [GitHub repo](https://github.com/fluegergehaimer/foodgram)
