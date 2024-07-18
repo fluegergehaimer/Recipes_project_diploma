@@ -1,5 +1,6 @@
 from djoser.serializers import UserSerializer
 from drf_extra_fields.fields import Base64ImageField
+import pymorphy2
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -9,6 +10,8 @@ from recipes.models import (
 )
 from .utils import check_unique_items, get_ingredients_values
 
+
+morph = pymorphy2.MorphAnalyzer()
 
 class FoodgramUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
@@ -163,7 +166,9 @@ class RecipeSerializer(serializers.ModelSerializer):
             RecipeIngredient(
                 recipe=recipe,
                 ingredient=ingredient['id'],
-                amount=ingredient['amount']
+                amount=ingredient['amount'],
+                # measurement_unit=morph.parse(ingredient['measurement_unit'])[0].make_agree_with_number(ingredient['amount']).word
+
             ) for ingredient in ingredients_data
         )
 

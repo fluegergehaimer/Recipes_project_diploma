@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Group
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
+import pymorphy2
 
 from .models import (
     Favorite, Tag, Ingredient, Recipe,
@@ -10,6 +11,10 @@ from .models import (
 )
 
 admin.site.unregister(Group)
+
+
+morph = pymorphy2.MorphAnalyzer()
+STRING = '{name} - {amount} {unit}.'
 
 
 class IngredientInline(admin.TabularInline):
@@ -89,8 +94,7 @@ class RecipeAdmin(admin.ModelAdmin):
         'favorites_count',
     )
     search_fields = (
-        'name__startswith',
-        'tags'
+        'name',
     )
     list_filter = (
         'author',
@@ -107,11 +111,17 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description='Продукты')
     def get_ingredients(self, obj):
         return mark_safe('<br> '.join([
-            f'{item["ingredient__name"]} - {item["amount"]} '
-            f'{item["ingredient__measurement_unit"][:4]}.'
+            STRING.format(
+                name=item["ingredient__name"],
+                amount=item["amount"],
+                unit=morph.parse(
+                    item["ingredient__measurement_unit"]
+                )[0].make_agree_with_number(item["amount"]).word
+            )
             for item in obj.recipe_ingredients.values(
                 'ingredient__name',
-                'amount', 'ingredient__measurement_unit')]))
+                'amount', 'ingredient__measurement_unit')])
+            )
 
     @admin.display(description='В избранном')
     def favorites_count(self, recipes):

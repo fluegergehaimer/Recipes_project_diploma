@@ -104,7 +104,7 @@ class Ingredient(models.Model):
     )
     measurement_unit = models.CharField(
         max_length=MAX_LENGTH,
-        verbose_name='Единица измерения'
+        verbose_name='Единица измерения',
     )
 
     class Meta:
@@ -120,7 +120,7 @@ class Ingredient(models.Model):
         )
 
     def __str__(self):
-        return f'{self.name[:TEXT_LIMIT]} {self.measurement_unit[:4]}'
+        return f'{self.name[:TEXT_LIMIT]} {self.measurement_unit}'
 
 
 class Recipe(models.Model):
@@ -178,7 +178,7 @@ class RecipeIngredient(models.Model):
         verbose_name='Рецепт',
         on_delete=models.CASCADE
     )
-    amount = models.PositiveIntegerField(
+    amount = models.SmallIntegerField(
         verbose_name='Мера',
         validators=[
             MinValueValidator(MIN_VALUE, message=MIN_MESSAGE)

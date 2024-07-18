@@ -46,3 +46,30 @@ def get_ingredients_values(lst, key):
     filtered_list = filter(lambda d: key in d, lst)
     result = [d[key] for d in filtered_list]
     return result
+
+
+# def morph_validator():
+#     morph = pymorphy2.MorphAnalyzer()
+#     morph.parse('ingredient.measurement_unit')[0].make_agree_with_number('recipe_ingredients.amount').word
+# def measurement_unit_check():
+#     if Ingredient.measurement_unit == 'банка':
+#         if recipe.ingredient.amount == 1 or str(recipe.ingredient.amount)[-1] == '1':
+#             ingredient.measurement_unit = 'банка'
+#         elif recipe.ingredient.amount in [2, 3, 4] or str(recipe.ingredient.amount)[-1] in ['2', '3', '4']:
+#             ingredient.measurement_unit = 'банки'
+#         else:
+#             ingredient.measurement_unit = 'банок'
+
+# 'банка' 'банки' 'банок'  
+# батон
+# веточка
+# г
+# горсть
+# капля
+# кусок
+# мл
+# ст. л.
+# стакан
+# ч. л.
+# шт.
+# щепотка
