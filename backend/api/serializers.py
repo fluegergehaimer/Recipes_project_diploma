@@ -13,6 +13,7 @@ from .utils import check_unique_items, get_ingredients_values
 
 morph = pymorphy2.MorphAnalyzer()
 
+
 class FoodgramUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
     avatar = Base64ImageField()
