@@ -27,9 +27,9 @@ class CookingTimeFilter(admin.SimpleListFilter):
 
     def lookups(self, request, model_admin):
         return [
-            ('fast', ('быстрые, 1-15мин.')),
-            ('medium', ('средние, 15-30мин.')),
-            ('long', ('долгие, 30 и более')),
+            ('fast', ('быстрые, до 15мин.')),
+            ('medium', ('средние, до 30мин.')),
+            ('long', ('долгие, 30мин. и более')),
         ]
 
     def queryset(self, request, queryset):
