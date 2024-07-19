@@ -10,8 +10,8 @@ from .models import (
     RecipeIngredient, ShoppingCart, Subscription, FoodgramUser
 )
 
-admin.site.unregister(Group)
 
+admin.site.unregister(Group)
 
 morph = pymorphy2.MorphAnalyzer()
 STRING = '{name} - {amount} {unit}.'
@@ -121,7 +121,7 @@ class RecipeAdmin(admin.ModelAdmin):
             for item in obj.recipe_ingredients.values(
                 'ingredient__name',
                 'amount', 'ingredient__measurement_unit')])
-            )
+        )
 
     @admin.display(description='В избранном')
     def favorites_count(self, recipes):
