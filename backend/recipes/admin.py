@@ -47,21 +47,11 @@ class TagAdmin(admin.ModelAdmin):
     list_display = (
         'name',
         'slug',
-        'color',
-        'get_color',
     )
     search_fields = (
         'name',
         'slug',
     )
-
-    @admin.display(
-        description=('Цвет'),
-    )
-    def get_color(self, tag):
-        return format_html(
-            f'<span style="background-color: {tag.color};">_____</span>'
-        )
 
 
 @admin.register(Ingredient)

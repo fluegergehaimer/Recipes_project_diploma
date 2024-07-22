@@ -14,22 +14,29 @@ def generate_shopping_list(request):
     ).annotate(
         total_quantity=Sum('amount')
     )
-    shopping_list = [
+    shopping_list = (
+            f'Список покупок {datetime.now()}.\n\n'
+        )
+    shopping_list += "\n".join([
         f'{index + 1}. '
         f'{item["ingredient__name"].capitalize()} - '
         f'{item["total_quantity"]} '
         f'{item["ingredient__measurement_unit"]}.'
         for index, item in enumerate(ingredients)
-    ]
+    ])
     recipes = list(*set(
         RecipeIngredient.objects.filter(
             recipe__shoppingcarts__user=request.user
         ).values_list('recipe__name')
     ))
-    return ''.join(
-        f'Список покупок {datetime.now()}.\nПродукты:\n'
-        f'{shopping_list}\nДля рецептов:\n{recipes}'
+    shopping_list += ''.join(
+        f'Для рецептов:\n{recipes}'
     )
+    return shopping_list
+    # return ''.join(
+    #     f'Список покупок {datetime.now()}.\nПродукты:\n'
+    #     f'{shopping_list}\nДля рецептов:\n{recipes}'
+    # )
 
 
 def check_unique_items(data):

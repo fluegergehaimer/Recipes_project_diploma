@@ -62,6 +62,8 @@ class RecipeIngredientReadSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField(source='ingredient.id')
     name = serializers.ReadOnlyField(source='ingredient.name')
     measurement_unit = serializers.ReadOnlyField(
+        # morph.parse(source='ingredient.measurement_unit')[0].make_agree_with_number(source='amount').word
+
         source='ingredient.measurement_unit'
     )
 
@@ -168,8 +170,6 @@ class RecipeSerializer(serializers.ModelSerializer):
                 recipe=recipe,
                 ingredient=ingredient['id'],
                 amount=ingredient['amount'],
-                # measurement_unit=morph.parse(ingredient['measurement_unit'])[0].make_agree_with_number(ingredient['amount']).word
-
             ) for ingredient in ingredients_data
         )
 
@@ -245,7 +245,7 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         recipes = Recipe.objects.all().prefetch_related('author')
         recipes_limit = int(request.GET.get('recipes_limit', 10**10))
         return DisplayRecipesSerializer(
-            recipes[:recipes_limit], many=True, context=self.context
+            recipes[:recipes_limit], many=True
         ).data
 
 

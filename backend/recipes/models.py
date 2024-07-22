@@ -66,15 +66,6 @@ class Tag(models.Model):
         verbose_name='Название тэга',
         unique=True
     )
-    color = ColorField(
-        format='hex',
-        max_length=COLOR_MAX_LENGTH,
-        unique=True,
-        verbose_name='Код цвета',
-        validators=[
-            RegexValidator(regex=r'^#([A-Fa-f0-9]{6})$')
-        ],
-    )
     slug = models.SlugField(
         verbose_name='Слаг тэга',
         max_length=MAX_LENGTH,
