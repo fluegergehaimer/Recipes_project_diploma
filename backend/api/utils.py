@@ -15,9 +15,9 @@ def generate_shopping_list(request):
         total_quantity=Sum('amount')
     )
     shopping_list = (
-            f'Список покупок {datetime.now()}.\n\n'
-        )
-    shopping_list += "\n".join([
+        f'Список покупок {datetime.now()}.\n\n'
+    )
+    shopping_list += '\n'.join([
         f'{index + 1}. '
         f'{item["ingredient__name"].capitalize()} - '
         f'{item["total_quantity"]} '

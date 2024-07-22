@@ -1,12 +1,9 @@
-from colorfield.fields import ColorField
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import (
-    RegexValidator, MinValueValidator
-)
+from django.core.validators import MinValueValidator
 from django.db import models
 
 from .constants import (
-    COLOR_MAX_LENGTH, EMAIL_MAX_LENGTH, MAX_LENGTH,
+    EMAIL_MAX_LENGTH, MAX_LENGTH,
     MIN_VALUE, TEXT_LIMIT, USER_MAX_LENGTH
 )
 from .validators import (validate_username, validate_username_via_regex)
