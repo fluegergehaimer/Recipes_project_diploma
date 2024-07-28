@@ -2,41 +2,39 @@ from datetime import datetime
 
 from django.db.models import Sum
 from rest_framework.exceptions import ValidationError
+import pymorphy2
 
-from recipes.models import RecipeIngredient
+from recipes.models import ShoppingCart
+
+
+morph = pymorphy2.MorphAnalyzer()
 
 
 def generate_shopping_list(request):
-    ingredients = RecipeIngredient.objects.filter(
-        recipe__shoppingcarts__user=request.user
+    ingredients = ShoppingCart.objects.filter(
+        user=request.user
     ).values(
-        'ingredient__name', 'ingredient__measurement_unit', 'recipe__name'
+        'recipe__ingredients__name',
+        'recipe__ingredients__measurement_unit',
+        'recipe__name'
     ).annotate(
-        total_quantity=Sum('amount')
+        total_quantity=Sum('recipe__recipe_ingredients__amount')
     )
-    shopping_list = (
-        f'Список покупок {datetime.now()}.\n\n'
-    )
-    shopping_list += '\n'.join([
+    shopping_list = ([
         f'{index + 1}. '
-        f'{item["ingredient__name"].capitalize()} - '
+        f'{item["recipe__ingredients__name"].capitalize()} - '
         f'{item["total_quantity"]} '
-        f'{item["ingredient__measurement_unit"]}.'
+        f'{item["recipe__ingredients__measurement_unit"]}.'
         for index, item in enumerate(ingredients)
     ])
-    recipes = list(*set(
-        RecipeIngredient.objects.filter(
-            recipe__shoppingcarts__user=request.user
-        ).values_list('recipe__name')
-    ))
-    shopping_list += ''.join(
-        f'Для рецептов:\n{recipes}'
+    recipes = list(set([
+        f'{name["recipe__name"]} '
+        for name in ingredients
+    ]))
+    return (
+        f'Список покупок {datetime.now()}.\nПродукты:\n'
+        f'{shopping_list}\nДля рецептов:\n{recipes}'
     )
-    return shopping_list
-    # return ''.join(
-    #     f'Список покупок {datetime.now()}.\nПродукты:\n'
-    #     f'{shopping_list}\nДля рецептов:\n{recipes}'
-    # )
 
 
 def check_unique_items(data):
@@ -53,3 +51,7 @@ def get_ingredients_values(lst, key):
     filtered_list = filter(lambda d: key in d, lst)
     result = [d[key] for d in filtered_list]
     return result
+
+
+def morph_parse(word, num):
+    return morph.parse(word)[0].make_agree_with_number(num).word

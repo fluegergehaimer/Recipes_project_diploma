@@ -1,6 +1,5 @@
 from djoser.serializers import UserSerializer
 from drf_extra_fields.fields import Base64ImageField
-import pymorphy2
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -9,9 +8,6 @@ from recipes.models import (
     ShoppingCart, Subscription, Tag, FoodgramUser
 )
 from .utils import check_unique_items, get_ingredients_values
-
-
-morph = pymorphy2.MorphAnalyzer()
 
 
 class FoodgramUserSerializer(UserSerializer):
@@ -62,8 +58,6 @@ class RecipeIngredientReadSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField(source='ingredient.id')
     name = serializers.ReadOnlyField(source='ingredient.name')
     measurement_unit = serializers.ReadOnlyField(
-        # morph.parse(source='ingredient.measurement_unit')[0].make_agree_with_number(source='amount').word
-
         source='ingredient.measurement_unit'
     )
 
@@ -207,7 +201,7 @@ class DisplayRecipesSerializer(serializers.ModelSerializer):
 class SubscriptionCreateSerializer(serializers.ModelSerializer):
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.IntegerField(
-        source='subscriber.recipes.count',
+        source='subscribed_to.recipes.count',
         read_only=True
     )
 
@@ -215,15 +209,17 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         model = Subscription
         fields = ('subscribed_to', 'subscriber', 'recipes', 'recipes_count')
 
-    def validate(self, attrs):
-        if attrs.get('subscribed_to') == attrs.get('subscriber'):
+    def validate(self, data):
+        request = self.context['request']
+        subscribed_to = data.get('subscribed_to')
+        if request.user.id == subscribed_to.id:
             raise ValidationError('Нельзя подписаться на самого себя.')
         if Subscription.objects.filter(
-            subscribed_to=attrs.get('subscribed_to'),
-            subscriber=attrs.get('subscriber')
+            subscribed_to=subscribed_to.id,
+            subscriber=request.user
         ).exists():
             raise ValidationError('Подписка уже существует.')
-        return attrs
+        return data
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -242,7 +238,7 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
 
     def get_recipes(self, author):
         request = self.context.get('request')
-        recipes = Recipe.objects.all().prefetch_related('author')
+        recipes = author.subscribed_to.recipes.all()
         recipes_limit = int(request.GET.get('recipes_limit', 10**10))
         return DisplayRecipesSerializer(
             recipes[:recipes_limit], many=True

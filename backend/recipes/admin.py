@@ -9,6 +9,7 @@ from .models import (
     Favorite, Tag, Ingredient, Recipe,
     RecipeIngredient, ShoppingCart, Subscription, FoodgramUser
 )
+from api.utils import morph_parse
 
 
 admin.site.unregister(Group)
@@ -99,16 +100,17 @@ class RecipeAdmin(admin.ModelAdmin):
         ))
 
     @admin.display(description='Продукты')
-    def get_ingredients(self, obj):
+    def get_ingredients(self, recipe):
         return mark_safe('<br> '.join([
             STRING.format(
                 name=item["ingredient__name"],
                 amount=item["amount"],
-                unit=morph.parse(
-                    item["ingredient__measurement_unit"]
-                )[0].make_agree_with_number(item["amount"]).word
+                unit=morph_parse(
+                    item["ingredient__measurement_unit"],
+                    item["amount"]
+                )
             )
-            for item in obj.recipe_ingredients.values(
+            for item in recipe.recipe_ingredients.values(
                 'ingredient__name',
                 'amount', 'ingredient__measurement_unit')])
         )

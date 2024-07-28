@@ -23,9 +23,9 @@ from .filters import IngredientFilter, RecipeFilter
 from .paginators import PageLimitPaginator, SubscriptionPaginator
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
-    AvatarSerializer, FoodgramUserSerializer, FavoriteSerializer,
-    IngredientSerializer, RecipeGetSerializer, RecipeSerializer,
-    ShoppingCartSerializer, SubscriptionCreateSerializer,
+    AvatarSerializer, FavoriteSerializer,
+    FoodgramUserSerializer, IngredientSerializer, RecipeGetSerializer,
+    RecipeSerializer, ShoppingCartSerializer, SubscriptionCreateSerializer,
     TagSerializer,
 )
 from .utils import generate_shopping_list
@@ -67,10 +67,10 @@ class FoodgramUserViewSet(UserViewSet):
     def avatar(self, request, **kwargs):
         user = get_object_or_404(FoodgramUser, username=request.user)
         if request.method == 'PUT':
-            serializers = AvatarSerializer(user, data=request.data)
-            serializers.is_valid(raise_exception=True)
-            serializers.save()
-            return Response(serializers.data, status=200)
+            serializer = AvatarSerializer(user, data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=200)
         user.avatar = None
         user.save()
         return Response(status=204)
@@ -158,13 +158,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
         methods=['get'],
         detail=True,
         url_path='get-link',
-        url_name='get-link',
+        url_name='get_link',
     )
-    def get_link(self, request, pk=None):
+    def get_link(self, request, pk):
         long_url = request.path
         short_url = request.META.get(
             'HTTP_HOST'
-        ) + f'/recipes/{id}' + get_surl(long_url)
+        ) + get_surl(long_url)
         response = Response(
             {'short-link': short_url},
             status=status.HTTP_200_OK
@@ -189,7 +189,6 @@ class SubscriptionListView(ListAPIView):
         return PageLimitPaginator
 
     def get_queryset(self):
-        limit = int(self.request.GET.get('limit', 10**10))
         return self.request.user.subscribers.all().order_by(
             'subscribed_to__username'
-        )[:limit]
+        )
