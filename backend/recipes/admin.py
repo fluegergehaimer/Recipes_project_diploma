@@ -3,7 +3,6 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Group
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
-import pymorphy2
 
 from .models import (
     Favorite, Tag, Ingredient, Recipe,
@@ -14,7 +13,6 @@ from api.utils import morph_parse
 
 admin.site.unregister(Group)
 
-morph = pymorphy2.MorphAnalyzer()
 STRING = '{name} - {amount} {unit}.'
 
 
