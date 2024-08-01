@@ -7,7 +7,8 @@ from recipes.models import (
     Favorite, Ingredient, RecipeIngredient, Recipe,
     ShoppingCart, Subscription, Tag, FoodgramUser
 )
-from .utils import check_unique_items, get_ingredients_values
+from .utils import get_ingredients_values
+from .validators import check_unique_items
 
 
 class FoodgramUserSerializer(UserSerializer):
@@ -127,7 +128,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = fields = (
+        fields = (
             'id',
             'ingredients',
             'tags',
@@ -184,8 +185,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         instance.tags.clear()
         instance.tags.set(tags)
         self.create_ingredients(ingredients, recipe=instance)
-        instance.save()
-        return instance
+        return super().update(instance, validated_data)
 
 
 class DisplayRecipesSerializer(serializers.ModelSerializer):
@@ -212,10 +212,10 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         request = self.context['request']
         subscribed_to = data.get('subscribed_to')
-        if request.user.id == subscribed_to.id:
+        if request.user == subscribed_to:
             raise ValidationError('Нельзя подписаться на самого себя.')
         if Subscription.objects.filter(
-            subscribed_to=subscribed_to.id,
+            subscribed_to=subscribed_to,
             subscriber=request.user
         ).exists():
             raise ValidationError('Подписка уже существует.')
@@ -243,30 +243,3 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         return DisplayRecipesSerializer(
             recipes[:recipes_limit], many=True
         ).data
-
-
-class AddToCollectionSerializer(serializers.ModelSerializer):
-    def validate(self, data):
-        user = data.get('user')
-        recipe = data.get('recipe')
-        if self.Meta.model.objects.filter(user=user, recipe=recipe).exists():
-            raise ValidationError('Рецепт уже добавлен.')
-        return data
-
-    def to_representation(self, instance):
-        return DisplayRecipesSerializer(
-            instance=instance.recipe,
-            context={'request': self.context.get('request')}
-        ).data
-
-
-class FavoriteSerializer(AddToCollectionSerializer):
-    class Meta:
-        model = Favorite
-        fields = ('user', 'recipe')
-
-
-class ShoppingCartSerializer(AddToCollectionSerializer):
-    class Meta:
-        model = ShoppingCart
-        fields = ('user', 'recipe')

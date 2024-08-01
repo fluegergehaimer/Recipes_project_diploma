@@ -1,12 +1,14 @@
 from datetime import datetime
 
+from django.db.models import Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
-from django_short_url.views import get_surl
+# from django_short_url.views import get_surl
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import (
     AllowAny, IsAuthenticated,
@@ -16,16 +18,17 @@ from rest_framework.response import Response
 
 from recipes.models import (
     Favorite, Ingredient,
-    Recipe, ShoppingCart,
+    Recipe, RecipeIngredient, ShoppingCart,
     Subscription, Tag, FoodgramUser
 )
 from .filters import IngredientFilter, RecipeFilter
-from .paginators import PageLimitPaginator, SubscriptionPaginator
+from .paginators import PageLimitPaginator
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
-    AvatarSerializer, FavoriteSerializer,
+    AvatarSerializer, DisplayRecipesSerializer,
     FoodgramUserSerializer, IngredientSerializer, RecipeGetSerializer,
-    RecipeSerializer, ShoppingCartSerializer, SubscriptionCreateSerializer,
+    RecipeSerializer,
+    SubscriptionCreateSerializer,
     TagSerializer,
 )
 from .utils import generate_shopping_list
@@ -100,19 +103,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return RecipeSerializer
 
     @staticmethod
-    def add_recipe_to_collection(request, pk, serialiser, model):
+    def add_or_delete_recipe_from_collection(request, pk, model):
         if request.method == 'POST':
-            user = request.user.id
-            serializer_create = serialiser(
-                data={
-                    'user': user,
-                    'recipe': pk,
-                }
-            )
-            serializer_create.is_valid(raise_exception=True)
-            serializer_create.save()
+            user = request.user
+            if model.objects.filter(user=user, recipe__id=pk).exists():
+                raise ValidationError('Рецепт уже добавлен')
+            recipe = get_object_or_404(Recipe, pk=pk)
+            model.objects.create(user=user, recipe=recipe)
+            serializer = DisplayRecipesSerializer(recipe)
             return Response(
-                serializer_create.data, status=status.HTTP_201_CREATED
+                serializer.data, status=status.HTTP_201_CREATED
             )
         get_object_or_404(model, recipe=pk).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -123,10 +123,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def favorite(self, request, pk):
-        return self.add_recipe_to_collection(
+        return self.add_or_delete_recipe_from_collection(
             request,
             pk,
-            FavoriteSerializer,
             Favorite
         )
 
@@ -136,10 +135,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def shopping_cart(self, request, pk):
-        return self.add_recipe_to_collection(
+        return self.add_or_delete_recipe_from_collection(
             request,
             pk,
-            ShoppingCartSerializer,
             ShoppingCart
         )
 
@@ -147,8 +145,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
         detail=False, methods=['get'], permission_classes=[IsAuthenticated]
     )
     def download_shopping_cart(self, request):
+        ingredients = RecipeIngredient.objects.filter(
+            recipe__shoppingcarts__user=request.user
+        ).values(
+            'ingredient__name',
+            'ingredient__measurement_unit',
+            'recipe__name'
+        ).annotate(
+            total_quantity=Sum('recipe__recipe_ingredients__amount')
+        )
         return FileResponse(
-            generate_shopping_list(request),
+            generate_shopping_list(ingredients),
             as_attachment=True,
             content_type='txt',
             filename=f'{datetime.now()}_shopping_list.txt'
@@ -161,12 +168,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_name='get_link',
     )
     def get_link(self, request, pk):
-        long_url = request.path
-        short_url = request.META.get(
-            'HTTP_HOST'
-        ) + get_surl(long_url)
+        link = request.build_absolute_uri(f'/recipes/{pk}/')
         response = Response(
-            {'short-link': short_url},
+            {'short-link': link},
             status=status.HTTP_200_OK
         )
         return response
@@ -182,13 +186,7 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 class SubscriptionListView(ListAPIView):
     serializer_class = SubscriptionCreateSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,)
-
-    def get_pagination_class(self):
-        if self.action in ['create', 'list']:
-            return SubscriptionPaginator
-        return PageLimitPaginator
+    pagination_class = PageLimitPaginator
 
     def get_queryset(self):
-        return self.request.user.subscribers.all().order_by(
-            'subscribed_to__username'
-        )
+        return self.request.user.subscribers.all()

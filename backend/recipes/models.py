@@ -1,10 +1,11 @@
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.shortcuts import reverse
 
 from .constants import (
-    EMAIL_MAX_LENGTH, MAX_LENGTH,
-    MIN_VALUE, TEXT_LIMIT, USER_MAX_LENGTH
+    EMAIL_MAX_LENGTH, MAX_NAME_LENGTH,
+    MIN_TIME_AMOUNT_VALUE, TEXT_LIMIT, USER_MAX_LENGTH
 )
 from .validators import (validate_username, validate_username_via_regex)
 
@@ -18,7 +19,7 @@ class FoodgramUser(AbstractUser):
 
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
     username = models.CharField(
-        verbose_name='Имя пользователя',
+        verbose_name='Имя учетной записи',
         max_length=USER_MAX_LENGTH,
         unique=True,
         validators=[validate_username, validate_username_via_regex]
@@ -45,7 +46,7 @@ class FoodgramUser(AbstractUser):
         blank=True,
         null=True,
         default=None,
-        verbose_name='avatar'
+        verbose_name='Изображение пользователя'
     )
 
     class Meta:
@@ -59,13 +60,13 @@ class FoodgramUser(AbstractUser):
 
 class Tag(models.Model):
     name = models.CharField(
-        max_length=MAX_LENGTH,
+        max_length=MAX_NAME_LENGTH,
         verbose_name='Название тэга',
         unique=True
     )
     slug = models.SlugField(
         verbose_name='Слаг тэга',
-        max_length=MAX_LENGTH,
+        max_length=MAX_NAME_LENGTH,
         unique=True,
     )
 
@@ -87,11 +88,11 @@ class Tag(models.Model):
 
 class Ingredient(models.Model):
     name = models.CharField(
-        max_length=MAX_LENGTH,
+        max_length=MAX_NAME_LENGTH,
         verbose_name='Название',
     )
     measurement_unit = models.CharField(
-        max_length=MAX_LENGTH,
+        max_length=MAX_NAME_LENGTH,
         verbose_name='Единица измерения',
     )
 
@@ -118,14 +119,14 @@ class Recipe(models.Model):
         on_delete=models.CASCADE,
     )
     name = models.CharField(
-        max_length=MAX_LENGTH,
+        max_length=MAX_NAME_LENGTH,
         verbose_name='Название рецепта'
     )
     text = models.TextField(verbose_name='Описание')
     cooking_time = models.PositiveIntegerField(
-        verbose_name='Время приготовления (в минутах)',
+        verbose_name='Время (мин)',
         validators=[
-            MinValueValidator(MIN_VALUE, message=MIN_MESSAGE)
+            MinValueValidator(MIN_TIME_AMOUNT_VALUE, message=MIN_MESSAGE)
         ]
     )
     ingredients = models.ManyToManyField(
@@ -154,6 +155,9 @@ class Recipe(models.Model):
     def __str__(self):
         return self.name[:TEXT_LIMIT]
 
+    def get_absolute_url(self):
+        return reverse('recipe', kwargs={'.id': self.id})
+
 
 class RecipeIngredient(models.Model):
     ingredient = models.ForeignKey(
@@ -169,7 +173,7 @@ class RecipeIngredient(models.Model):
     amount = models.SmallIntegerField(
         verbose_name='Мера',
         validators=[
-            MinValueValidator(MIN_VALUE, message=MIN_MESSAGE)
+            MinValueValidator(MIN_TIME_AMOUNT_VALUE, message=MIN_MESSAGE)
         ]
     )
 
@@ -197,6 +201,7 @@ class Subscription(models.Model):
     class Meta:
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
+        ordering = ['subscribed_to__username']
         constraints = [
             models.UniqueConstraint(
                 fields=['subscriber', 'subscribed_to'],

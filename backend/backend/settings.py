@@ -30,10 +30,7 @@ INSTALLED_APPS = [
     'colorfield',
     'api.apps.ApiConfig',
     'recipes.apps.RecipesConfig',
-    'django_short_url',
 ]
-
-DJANGO_SHORT_URL_REDIRECT_URL = ''
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

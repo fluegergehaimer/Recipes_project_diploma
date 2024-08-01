@@ -1,19 +1,15 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Group
-from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from .models import (
     Favorite, Tag, Ingredient, Recipe,
     RecipeIngredient, ShoppingCart, Subscription, FoodgramUser
 )
-from api.utils import morph_parse
 
 
 admin.site.unregister(Group)
-
-STRING = '{name} - {amount} {unit}.'
 
 
 class IngredientInline(admin.TabularInline):
@@ -63,6 +59,10 @@ class IngredientAdmin(admin.ModelAdmin):
     list_filter = (
         'measurement_unit',
     )
+    search_fields = (
+        'name',
+        'measurement_unit'
+    )
 
     @admin.display(description='рецепты')
     def get_recipes(self, ingredient):
@@ -84,6 +84,7 @@ class RecipeAdmin(admin.ModelAdmin):
     )
     search_fields = (
         'name',
+        'tags'
     )
     list_filter = (
         'author',
@@ -100,17 +101,10 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description='Продукты')
     def get_ingredients(self, recipe):
         return mark_safe('<br> '.join([
-            STRING.format(
-                name=item["ingredient__name"],
-                amount=item["amount"],
-                unit=morph_parse(
-                    item["ingredient__measurement_unit"],
-                    item["amount"]
-                )
-            )
-            for item in recipe.recipe_ingredients.values(
-                'ingredient__name',
-                'amount', 'ingredient__measurement_unit')])
+            f'{ingredient.ingredient.name} - '
+            f'{ingredient.amount} '
+            f'({ingredient.ingredient.measurement_unit})'
+            for ingredient in recipe.recipe_ingredients.all()])
         )
 
     @admin.display(description='В избранном')
@@ -121,7 +115,7 @@ class RecipeAdmin(admin.ModelAdmin):
         description=('image'),
     )
     def image_preview(self, url):
-        return format_html(
+        return mark_safe(
             f'<img src="{url.image.url}" width=40 height=40 />'
         )
 
