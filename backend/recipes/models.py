@@ -5,12 +5,12 @@ from django.shortcuts import reverse
 
 from .constants import (
     EMAIL_MAX_LENGTH, MAX_NAME_LENGTH,
-    MIN_TIME_AMOUNT_VALUE, TEXT_LIMIT, USER_MAX_LENGTH
+    MIN_AMOUNT_VALUE, MIN_TIME_VALUE, TEXT_LIMIT, USER_MAX_LENGTH
 )
-from .validators import (validate_username, validate_username_via_regex)
+from .validators import (validate_username, validate_username_symbols)
 
 
-MIN_MESSAGE = 'Значение не может быть меньше {MIN_VALUE}'
+MIN_MESSAGE = 'Значение не может быть меньше {MIN_AMOUNT_VALUE}'
 
 
 class FoodgramUser(AbstractUser):
@@ -22,7 +22,7 @@ class FoodgramUser(AbstractUser):
         verbose_name='Имя учетной записи',
         max_length=USER_MAX_LENGTH,
         unique=True,
-        validators=[validate_username, validate_username_via_regex]
+        validators=[validate_username, validate_username_symbols]
     )
     password = models.CharField(
         max_length=USER_MAX_LENGTH,
@@ -126,7 +126,7 @@ class Recipe(models.Model):
     cooking_time = models.PositiveIntegerField(
         verbose_name='Время (мин)',
         validators=[
-            MinValueValidator(MIN_TIME_AMOUNT_VALUE, message=MIN_MESSAGE)
+            MinValueValidator(MIN_TIME_VALUE)
         ]
     )
     ingredients = models.ManyToManyField(
@@ -156,7 +156,7 @@ class Recipe(models.Model):
         return self.name[:TEXT_LIMIT]
 
     def get_absolute_url(self):
-        return reverse('recipe', kwargs={'.id': self.id})
+        return reverse('recipe', args=['id'])
 
 
 class RecipeIngredient(models.Model):
@@ -173,7 +173,7 @@ class RecipeIngredient(models.Model):
     amount = models.SmallIntegerField(
         verbose_name='Мера',
         validators=[
-            MinValueValidator(MIN_TIME_AMOUNT_VALUE, message=MIN_MESSAGE)
+            MinValueValidator(MIN_AMOUNT_VALUE, message=MIN_MESSAGE)
         ]
     )
 

@@ -33,7 +33,7 @@ class CookingTimeFilter(admin.SimpleListFilter):
         if self.value() == 'medium':
             return queryset.filter(cooking_time__range=(15, 30))
         if self.value() == 'long':
-            return queryset.filter(cooking_time__range=(30, 3600))
+            return queryset.filter(cooking_time__range=(30, 10**10))
         return queryset
 
 

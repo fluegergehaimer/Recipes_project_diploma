@@ -8,7 +8,7 @@ from recipes.models import (
     ShoppingCart, Subscription, Tag, FoodgramUser
 )
 from .utils import get_ingredients_values
-from .validators import check_unique_items
+from .validators import check_items
 
 
 class FoodgramUserSerializer(UserSerializer):
@@ -146,8 +146,8 @@ class RecipeSerializer(serializers.ModelSerializer):
         ).data
 
     def validate(self, data):
-        check_unique_items(data['tags'])
-        check_unique_items(
+        check_items(data['tags'])
+        check_items(
             get_ingredients_values(
                 data['recipe_ingredients'], 'id'
             )
@@ -198,6 +198,28 @@ class DisplayRecipesSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'image', 'cooking_time')
 
 
+class DisplaySubscriptionSerializer(FoodgramUserSerializer):
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
+
+    class Meta(FoodgramUserSerializer.Meta):
+        model = FoodgramUser
+        fields = FoodgramUserSerializer.Meta.fields + (
+            'recipes', 'recipes_count'
+        )
+
+    def get_recipes_count(self, user):
+        return Recipe.objects.filter(
+            author=user).count()
+
+    def get_recipes(self, author):
+        return DisplayRecipesSerializer(
+            Recipe.objects.all()[:int(
+                self.context.get('request').GET.get('recipes_limit', 10**10)
+            )], many=True
+        ).data
+
+
 class SubscriptionCreateSerializer(serializers.ModelSerializer):
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.IntegerField(
@@ -222,24 +244,8 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         return data
 
     def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        additional_values = FoodgramUserSerializer(
-            instance.subscribed_to,
-            context={'request': self.context.get('request')}
-        ).data
-
-        for key, value in additional_values.items():
-            representation[key] = value
-
-        del representation['subscriber']
-        del representation['subscribed_to']
-
-        return representation
-
-    def get_recipes(self, author):
         request = self.context.get('request')
-        recipes = author.subscribed_to.recipes.all()
-        recipes_limit = int(request.GET.get('recipes_limit', 10**10))
-        return DisplayRecipesSerializer(
-            recipes[:recipes_limit], many=True
+        return DisplaySubscriptionSerializer(
+            instance=instance.subscriber,
+            context={'request': request}
         ).data

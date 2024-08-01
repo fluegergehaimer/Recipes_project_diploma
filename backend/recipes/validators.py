@@ -15,12 +15,12 @@ def validate_username(username):
     return username
 
 
-def validate_username_via_regex(username):
+def validate_username_symbols(username):
     """Валидация поля username."""
-    if not re.match(USERNAME_VALID_PATTERN, username):
-        invalid_characters = re.sub(USERNAME_VALID_PATTERN, '', username)
+    invalid_characters = re.findall(USERNAME_VALID_PATTERN, username)
+    if invalid_characters:
         raise ValidationError(
             f'В username найдены недопустимые символы:'
-            f'{"".join(invalid_characters)}'
+            f'{"".join(set(invalid_characters))}'
         )
     return username

@@ -1,9 +1,11 @@
 from datetime import datetime
 
+from django.db import IntegrityError
 from django.db.models import Sum
 from django.http import FileResponse
-from django.shortcuts import get_object_or_404
-# from django_short_url.views import get_surl
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
+from django.utils import baseconv
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import viewsets, status
@@ -15,6 +17,7 @@ from rest_framework.permissions import (
     IsAuthenticatedOrReadOnly
 )
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from recipes.models import (
     Favorite, Ingredient,
@@ -106,15 +109,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def add_or_delete_recipe_from_collection(request, pk, model):
         if request.method == 'POST':
             user = request.user
-            if model.objects.filter(user=user, recipe__id=pk).exists():
-                raise ValidationError('Рецепт уже добавлен')
-            recipe = get_object_or_404(Recipe, pk=pk)
-            model.objects.create(user=user, recipe=recipe)
-            serializer = DisplayRecipesSerializer(recipe)
+            recipe = get_object_or_404(Recipe, id=pk)
+            try:
+                model.objects.create(user=user, recipe=recipe)
+            except IntegrityError:
+                raise ValidationError('Рецепт уже добавлен.')
             return Response(
-                serializer.data, status=status.HTTP_201_CREATED
+                DisplayRecipesSerializer(recipe).data,
+                status=status.HTTP_201_CREATED
             )
-        get_object_or_404(model, recipe=pk).delete()
+        get_object_or_404(model, recipe=recipe).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
@@ -145,17 +149,25 @@ class RecipeViewSet(viewsets.ModelViewSet):
         detail=False, methods=['get'], permission_classes=[IsAuthenticated]
     )
     def download_shopping_cart(self, request):
-        ingredients = RecipeIngredient.objects.filter(
+        recipe_ingredients = RecipeIngredient.objects.filter(
             recipe__shoppingcarts__user=request.user
         ).values(
             'ingredient__name',
             'ingredient__measurement_unit',
             'recipe__name'
         ).annotate(
-            total_quantity=Sum('recipe__recipe_ingredients__amount')
+            total_quantity=Sum('amount')
         )
+        recipes = [
+            f'{recipe["recipe__name"]} '
+            for recipe
+            in RecipeIngredient.objects.filter(
+                recipe__shoppingcarts__user=request.user
+            ).values('recipe__name')
+        ]
+
         return FileResponse(
-            generate_shopping_list(ingredients),
+            generate_shopping_list(recipe_ingredients, recipes),
             as_attachment=True,
             content_type='txt',
             filename=f'{datetime.now()}_shopping_list.txt'
@@ -168,12 +180,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_name='get_link',
     )
     def get_link(self, request, pk):
-        link = request.build_absolute_uri(f'/recipes/{pk}/')
-        response = Response(
-            {'short-link': link},
-            status=status.HTTP_200_OK
+        recipe = self.get_object()
+        encode_id = baseconv.base64.encode(recipe.id)
+        short_link = request.build_absolute_uri(
+            reverse('shortlink', kwargs={'encoded_id': encode_id})
         )
-        return response
+        return Response({'short-link': short_link}, status=status.HTTP_200_OK)
+
+
+class ShortLinkView(APIView):
+
+    def get(self, request, encoded_id):
+        recipe_id = baseconv.base64.decode(encoded_id)
+        return redirect(f'recipes/{recipe_id}/',)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):

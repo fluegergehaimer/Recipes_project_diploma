@@ -3,10 +3,13 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import include, path
 
+from api.views import ShortLinkView
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
+    path('s/<encoded_id>/', ShortLinkView.as_view(), name='shortlink'),
 ]
 
 if settings.DEBUG:
