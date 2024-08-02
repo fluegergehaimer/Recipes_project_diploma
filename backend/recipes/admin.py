@@ -64,7 +64,7 @@ class IngredientAdmin(admin.ModelAdmin):
         'measurement_unit'
     )
 
-    @admin.display(description='рецепты')
+    @admin.display(description='Рецепты')
     def get_recipes(self, ingredient):
         return ingredient.recipes.count()
 
@@ -111,9 +111,7 @@ class RecipeAdmin(admin.ModelAdmin):
     def favorites_count(self, recipes):
         return recipes.favorites.count()
 
-    @admin.display(
-        description=('image'),
-    )
+    @admin.display(description='Изображение')
     def image_preview(self, url):
         return mark_safe(
             f'<img src="{url.image.url}" width=40 height=40 />'
