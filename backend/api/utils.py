@@ -9,7 +9,7 @@ def generate_shopping_list(recipe_ingredients, recipes):
         f'({item["ingredient__measurement_unit"]}).'
         for index, item in enumerate(recipe_ingredients, start=1)
     ])
-    recipe_names = ', '.join(
+    recipe_names = '\n-'.join(
         recipe for recipe in recipes.values_list('name', flat=True)
     )
     return (
