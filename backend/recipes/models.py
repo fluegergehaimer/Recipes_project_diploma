@@ -10,9 +10,6 @@ from .constants import (
 from .validators import (validate_username, validate_username_symbols)
 
 
-MIN_MESSAGE = 'Значение не может быть меньше {MIN_AMOUNT_VALUE}'
-
-
 class FoodgramUser(AbstractUser):
     """Модель пользователя."""
     USERNAME_FIELD = 'email'
@@ -173,7 +170,7 @@ class RecipeIngredient(models.Model):
     amount = models.SmallIntegerField(
         verbose_name='Мера',
         validators=[
-            MinValueValidator(MIN_AMOUNT_VALUE, message=MIN_MESSAGE)
+            MinValueValidator(MIN_AMOUNT_VALUE)
         ]
     )
 

@@ -178,8 +178,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             amount=Sum('amount')
         ).order_by('ingredient__name')
         recipes = RecipeIngredient.objects.filter(
-                recipe__shoppingcarts__user=request.user
-            ).values_list('recipe__name', flat=True)
+            recipe__shoppingcarts__user=request.user
+        ).values_list('recipe__name', flat=True)
 
         return FileResponse(
             generate_shopping_list(recipe_ingredients, recipes),
