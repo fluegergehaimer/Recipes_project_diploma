@@ -6,7 +6,7 @@ from .views import (
     FoodgramUserViewSet, IngredientViewSet, RecipeViewSet,
     TagViewSet
 )
-# from recipes.views import ShortLinkView
+
 
 app_name = 'api'
 
