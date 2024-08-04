@@ -153,7 +153,7 @@ class Recipe(models.Model):
         return self.name[:TEXT_LIMIT]
 
     def get_absolute_url(self):
-        return reverse('recipe', args=['id'])
+        return reverse('api:recipes-detail', args=['id'])
 
 
 class RecipeIngredient(models.Model):

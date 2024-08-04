@@ -3,12 +3,12 @@ from datetime import datetime
 from django.db import IntegrityError
 from django.db.models import Sum
 from django.http import FileResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import viewsets, status
-from rest_framework.decorators import action, api_view
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import (
     AllowAny, IsAuthenticated,
@@ -191,21 +191,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_link(self, request, pk):
         recipe = get_object_or_404(Recipe, id=pk)
         short_link = request.build_absolute_uri(
-            reverse('shortlink', current_app='api', args=[recipe.id])
+            reverse('shortlink', current_app='backend', args=[recipe.id])
         )
         return Response({'short-link': short_link}, status=status.HTTP_200_OK)
-
-
-@api_view(['GET'])
-def get_recipe_by_short_link(request, pk=None):
-    recipe = get_object_or_404(Recipe, id=pk)
-    full_api_url = request.build_absolute_uri(
-        reverse(
-            'api:recipes-detail',
-            args=[recipe.id]
-        )
-    ).replace('/api', '')
-    return redirect(full_api_url)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
