@@ -8,5 +8,5 @@ def check_items(data):
     if len(data) != len(unique_items):
         items = [item for item in data if item in unique_items]
         raise ValidationError(
-            f'{items} уже созданы.'
+            f'{items} не должны повторяться.'
         )

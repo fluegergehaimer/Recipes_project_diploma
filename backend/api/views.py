@@ -65,24 +65,19 @@ class FoodgramUserViewSet(UserViewSet):
         if request.method == 'POST':
             author = get_object_or_404(FoodgramUser, pk=id)
             user = self.request.user
-            subscription = Subscription.objects.filter(
-                subscriber=user,
-                subscribed_to=author
-            )
             if request.user == author:
                 raise ValidationError('Нельзя подписаться на самого себя.')
-            elif subscription.exists():
-                raise ValidationError('Подписка уже существует.')
-            Subscription.objects.get_or_create(
+            subscription, created = Subscription.objects.get_or_create(
                 subscribed_to=author,
                 subscriber=user
             )
-            serializer = DisplaySubscriptionSerializer(
-                author, context={'request': request}
-            )
-            return Response(
-                serializer.data, status=status.HTTP_201_CREATED
-            )
+            if created:
+                return Response(
+                    DisplaySubscriptionSerializer(
+                        author, context={'request': request}
+                    ).data, status=status.HTTP_201_CREATED
+                )
+            raise ValidationError('Подписка уже существует.')
         get_object_or_404(Subscription, subscribed_to=id).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -177,10 +172,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         ).annotate(
             amount=Sum('amount')
         ).order_by('ingredient__name')
-        recipes = RecipeIngredient.objects.filter(
-            recipe__shoppingcarts__user=request.user
-        ).values_list('recipe__name', flat=True)
-
+        recipes = Recipe.objects.filter(
+            shoppingcarts__user=request.user
+        )
         return FileResponse(
             generate_shopping_list(recipe_ingredients, recipes),
             as_attachment=True,
@@ -195,11 +189,28 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_name='get_link',
     )
     def get_link(self, request, pk):
-        recipe = get_object_or_404(Recipe, pk=pk)
+        recipe_id = int(pk.replace("s/", ""))
+        recipe = get_object_or_404(Recipe, id=recipe_id)
         short_link = request.build_absolute_uri(
             reverse('shortlink', current_app='backend', args=[recipe.id])
         )
         return Response({'short-link': short_link}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'])
+    def get_recipe_by_short_link(self, request, pk=None):
+        try:
+            if isinstance(pk, str) and pk.startswith("s/"):
+                recipe_id = int(pk.replace("s/", ""))
+            else:
+                recipe_id = int(pk)
+            recipe = get_object_or_404(Recipe, id=recipe_id)
+            serializer = DisplayRecipesSerializer(recipe)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except ValueError:
+            return Response(
+                {'error': 'Invalid key'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):

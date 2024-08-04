@@ -203,8 +203,10 @@ class DisplaySubscriptionSerializer(FoodgramUserSerializer):
 
     class Meta(FoodgramUserSerializer.Meta):
         model = FoodgramUser
-        fields = FoodgramUserSerializer.Meta.fields + (
-            'recipes', 'recipes_count'
+        fields = (
+            *FoodgramUserSerializer.Meta.fields,
+            'recipes',
+            'recipes_count'
         )
 
     def get_recipes_count(self, user):
@@ -213,7 +215,7 @@ class DisplaySubscriptionSerializer(FoodgramUserSerializer):
 
     def get_recipes(self, author):
         return DisplayRecipesSerializer(
-            Recipe.objects.filter(author=author)[:int(
+            Recipe.objects.select_related('author')[:int(
                 self.context.get('request').GET.get('recipes_limit', 10**10)
             )], many=True
         ).data

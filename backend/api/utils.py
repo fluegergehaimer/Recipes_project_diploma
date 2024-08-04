@@ -9,10 +9,13 @@ def generate_shopping_list(recipe_ingredients, recipes):
         f'({item["ingredient__measurement_unit"]}).'
         for index, item in enumerate(recipe_ingredients, start=1)
     ])
+    recipe_names = ', '.join(
+        recipe for recipe in recipes.values_list('name', flat=True)
+    )
     return (
         f'Список покупок от {datetime.now().strftime("%d-%m-%Y %H:%M")}.'
         f'\n\nКупить:\n'
-        f'{shopping_list}\n\nДля рецептов:\n{list(set(recipes))}'
+        f'{shopping_list}\n\nДля рецептов:\n{recipe_names}'
     )
 
 
