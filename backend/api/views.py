@@ -196,23 +196,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
         )
         return Response({'short-link': short_link}, status=status.HTTP_200_OK)
 
+
 @api_view(['GET'])
 def get_recipe_by_short_link(request, pk=None):
-        # recipe_id = pk.split('/')[-1]  # Предполагается, что идентификатор находится в конце URL
-
-        # try:
-        #     recipe = Recipe.objects.get(id=pk)
-        # except Recipe.DoesNotExist:
-        #     return Response({'error': 'Recipe not found'}, status=status.HTTP_404_NOT_FOUND)
-        # recipe = Recipe.objects.get(id=pk)
-        recipe = get_object_or_404(Recipe, id=pk)
-        full_api_url = request.build_absolute_uri(
-            reverse(
-                'api:recipes-detail',
-                args=[recipe.id]
-            )
-        ).replace('/api', '')
-        return redirect(full_api_url)
+    recipe = get_object_or_404(Recipe, id=pk)
+    full_api_url = request.build_absolute_uri(
+        reverse(
+            'api:recipes-detail',
+            args=[recipe.id]
+        )
+    ).replace('/api', '')
+    return redirect(full_api_url)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
