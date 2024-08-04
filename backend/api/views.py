@@ -3,12 +3,12 @@ from datetime import datetime
 from django.db import IntegrityError
 from django.db.models import Sum
 from django.http import FileResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import (
     AllowAny, IsAuthenticated,
@@ -189,28 +189,30 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_name='get_link',
     )
     def get_link(self, request, pk):
-        recipe_id = int(pk.replace("s/", ""))
-        recipe = get_object_or_404(Recipe, id=recipe_id)
+        # recipe_id = int(pk.replace("s/", ""))
+        recipe = get_object_or_404(Recipe, id=pk)
         short_link = request.build_absolute_uri(
-            reverse('shortlink', current_app='backend', args=[recipe.id])
+            reverse('shortlink', current_app='api', args=[recipe.id])
         )
         return Response({'short-link': short_link}, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=['get'])
-    def get_recipe_by_short_link(self, request, pk=None):
-        try:
-            if isinstance(pk, str) and pk.startswith("s/"):
-                recipe_id = int(pk.replace("s/", ""))
-            else:
-                recipe_id = int(pk)
-            recipe = get_object_or_404(Recipe, id=recipe_id)
-            serializer = DisplayRecipesSerializer(recipe)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except ValueError:
-            return Response(
-                {'error': 'Invalid key'},
-                status=status.HTTP_400_BAD_REQUEST
+@api_view(['GET'])
+def get_recipe_by_short_link(request, pk=None):
+        # recipe_id = pk.split('/')[-1]  # Предполагается, что идентификатор находится в конце URL
+
+        # try:
+        #     recipe = Recipe.objects.get(id=pk)
+        # except Recipe.DoesNotExist:
+        #     return Response({'error': 'Recipe not found'}, status=status.HTTP_404_NOT_FOUND)
+        # recipe = Recipe.objects.get(id=pk)
+        recipe = get_object_or_404(Recipe, id=pk)
+        full_api_url = request.build_absolute_uri(
+            reverse(
+                'api:recipes-detail',
+                args=[recipe.id]
             )
+        ).replace('/api', '')
+        return redirect(full_api_url)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
