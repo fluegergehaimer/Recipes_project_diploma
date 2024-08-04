@@ -3,7 +3,7 @@ import re
 
 from django.core.exceptions import ValidationError
 from django.conf import settings
-from recipes.constants import USERNAME_VALID_PATTERN
+from recipes.constants import USERNAME_PATTERN
 
 
 def validate_username(username):
@@ -17,7 +17,7 @@ def validate_username(username):
 
 def validate_username_symbols(username):
     """Валидация поля username."""
-    invalid_characters = re.findall(USERNAME_VALID_PATTERN, username)
+    invalid_characters = re.findall(USERNAME_PATTERN, username)
     if invalid_characters:
         raise ValidationError(
             f'В username найдены недопустимые символы:'

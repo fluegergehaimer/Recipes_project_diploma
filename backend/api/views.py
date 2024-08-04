@@ -3,21 +3,18 @@ from datetime import datetime
 from django.db import IntegrityError
 from django.db.models import Sum
 from django.http import FileResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from django.utils import baseconv
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from rest_framework.generics import ListAPIView
 from rest_framework.permissions import (
     AllowAny, IsAuthenticated,
     IsAuthenticatedOrReadOnly
 )
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from recipes.models import (
     Favorite, Ingredient,
@@ -28,10 +25,9 @@ from .filters import IngredientFilter, RecipeFilter
 from .paginators import PageLimitPaginator
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (
-    AvatarSerializer, DisplayRecipesSerializer,
+    AvatarSerializer, DisplayRecipesSerializer, DisplaySubscriptionSerializer,
     FoodgramUserSerializer, IngredientSerializer, RecipeGetSerializer,
     RecipeSerializer,
-    SubscriptionCreateSerializer,
     TagSerializer,
 )
 from .utils import generate_shopping_list
@@ -48,27 +44,6 @@ class FoodgramUserViewSet(UserViewSet):
             return [IsAuthenticated()]
         return super().get_permissions()
 
-    @action(detail=True, methods=['post', 'delete'])
-    def subscribe(self, request, id):
-        if request.method == 'POST':
-            subscribed_to = get_object_or_404(FoodgramUser, pk=id)
-            subscriber = request.user
-
-            serializer_create = SubscriptionCreateSerializer(
-                data={
-                    'subscribed_to': subscribed_to.id,
-                    'subscriber': subscriber.id,
-                },
-                context={'request': request}
-            )
-            serializer_create.is_valid(raise_exception=True)
-            serializer_create.save()
-            return Response(
-                serializer_create.data, status=status.HTTP_201_CREATED
-            )
-        get_object_or_404(Subscription, subscribed_to=id).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
     @action(methods=['put', 'delete'], detail=True)
     def avatar(self, request, **kwargs):
         user = get_object_or_404(FoodgramUser, username=request.user)
@@ -80,6 +55,51 @@ class FoodgramUserViewSet(UserViewSet):
         user.avatar = None
         user.save()
         return Response(status=204)
+
+    @action(
+        detail=True,
+        methods=['post', 'delete'],
+        permission_classes=[IsAuthenticated]
+    )
+    def subscribe(self, request, id):
+        if request.method == 'POST':
+            author = get_object_or_404(FoodgramUser, pk=id)
+            user = self.request.user
+            subscription = Subscription.objects.filter(
+                subscriber=user,
+                subscribed_to=author
+            )
+            if request.user == author:
+                raise ValidationError('Нельзя подписаться на самого себя.')
+            elif subscription.exists():
+                raise ValidationError('Подписка уже существует.')
+            Subscription.objects.get_or_create(
+                subscribed_to=author,
+                subscriber=user
+            )
+            serializer = DisplaySubscriptionSerializer(
+                author, context={'request': request}
+            )
+            return Response(
+                serializer.data, status=status.HTTP_201_CREATED
+            )
+        get_object_or_404(Subscription, subscribed_to=id).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=False,
+        methods=['GET'],
+        permission_classes=[IsAuthenticated]
+    )
+    def subscriptions(self, request):
+        subscriptions = FoodgramUser.objects.filter(
+            authors__subscriber=request.user
+        )
+        paginated_subscriptions = self.paginate_queryset(subscriptions)
+        serializer = DisplaySubscriptionSerializer(
+            paginated_subscriptions, context={'request': request}, many=True
+        )
+        return self.get_paginated_response(serializer.data)
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
@@ -153,18 +173,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
             recipe__shoppingcarts__user=request.user
         ).values(
             'ingredient__name',
-            'ingredient__measurement_unit',
-            'recipe__name'
+            'ingredient__measurement_unit'
         ).annotate(
-            total_quantity=Sum('amount')
-        )
-        recipes = [
-            f'{recipe["recipe__name"]} '
-            for recipe
-            in RecipeIngredient.objects.filter(
+            amount=Sum('amount')
+        ).order_by('ingredient__name')
+        recipes = RecipeIngredient.objects.filter(
                 recipe__shoppingcarts__user=request.user
-            ).values('recipe__name')
-        ]
+            ).values_list('recipe__name', flat=True)
 
         return FileResponse(
             generate_shopping_list(recipe_ingredients, recipes),
@@ -180,19 +195,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url_name='get_link',
     )
     def get_link(self, request, pk):
-        recipe = self.get_object()
-        encode_id = baseconv.base64.encode(recipe.id)
+        recipe = get_object_or_404(Recipe, pk=pk)
         short_link = request.build_absolute_uri(
-            reverse('shortlink', kwargs={'encoded_id': encode_id})
+            reverse('shortlink', current_app='backend', args=[recipe.id])
         )
         return Response({'short-link': short_link}, status=status.HTTP_200_OK)
-
-
-class ShortLinkView(APIView):
-
-    def get(self, request, encoded_id):
-        recipe_id = baseconv.base64.decode(encoded_id)
-        return redirect(f'recipes/{recipe_id}/',)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -200,12 +207,3 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (AllowAny, )
     serializer_class = TagSerializer
     pagination_class = None
-
-
-class SubscriptionListView(ListAPIView):
-    serializer_class = SubscriptionCreateSerializer
-    permission_classes = (IsAuthenticatedOrReadOnly,)
-    pagination_class = PageLimitPaginator
-
-    def get_queryset(self):
-        return self.request.user.subscribers.all()

@@ -2,25 +2,17 @@ from datetime import datetime
 
 
 def generate_shopping_list(recipe_ingredients, recipes):
-    ingredients = {}
-    for item in recipe_ingredients:
-        name = item['ingredient__name']
-        unit = item['ingredient__measurement_unit']
-        amount = item['total_quantity']
-        ingredients[name] = {
-            'unit': unit,
-            'amount': amount,
-        }
     shopping_list = "\n".join([
-        f'- {name.capitalize()} - '
+        f'{index}. '
+        f'{item["ingredient__name"].capitalize()} - '
         f'{item["amount"]}'
-        f'({item["unit"]}).'
-        for name, item in ingredients.items()
+        f'({item["ingredient__measurement_unit"]}).'
+        for index, item in enumerate(recipe_ingredients, start=1)
     ])
     return (
-        f'Список покупок {datetime.now().strftime("%d-%m-%Y %H:%M")}.'
-        f'\nПродукты:\n'
-        f'{shopping_list}\nДля рецептов:\n{list(set(recipes))}'
+        f'Список покупок от {datetime.now().strftime("%d-%m-%Y %H:%M")}.'
+        f'\n\nКупить:\n'
+        f'{shopping_list}\n\nДля рецептов:\n{list(set(recipes))}'
     )
 
 

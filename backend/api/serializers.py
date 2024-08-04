@@ -1,11 +1,10 @@
 from djoser.serializers import UserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 
 from recipes.models import (
     Favorite, Ingredient, RecipeIngredient, Recipe,
-    ShoppingCart, Subscription, Tag, FoodgramUser
+    ShoppingCart, Tag, FoodgramUser
 )
 from .utils import get_ingredients_values
 from .validators import check_items
@@ -214,38 +213,7 @@ class DisplaySubscriptionSerializer(FoodgramUserSerializer):
 
     def get_recipes(self, author):
         return DisplayRecipesSerializer(
-            Recipe.objects.all()[:int(
+            Recipe.objects.filter(author=author)[:int(
                 self.context.get('request').GET.get('recipes_limit', 10**10)
             )], many=True
-        ).data
-
-
-class SubscriptionCreateSerializer(serializers.ModelSerializer):
-    recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.IntegerField(
-        source='subscribed_to.recipes.count',
-        read_only=True
-    )
-
-    class Meta:
-        model = Subscription
-        fields = ('subscribed_to', 'subscriber', 'recipes', 'recipes_count')
-
-    def validate(self, data):
-        request = self.context['request']
-        subscribed_to = data.get('subscribed_to')
-        if request.user == subscribed_to:
-            raise ValidationError('Нельзя подписаться на самого себя.')
-        if Subscription.objects.filter(
-            subscribed_to=subscribed_to,
-            subscriber=request.user
-        ).exists():
-            raise ValidationError('Подписка уже существует.')
-        return data
-
-    def to_representation(self, instance):
-        request = self.context.get('request')
-        return DisplaySubscriptionSerializer(
-            instance=instance.subscriber,
-            context={'request': request}
         ).data

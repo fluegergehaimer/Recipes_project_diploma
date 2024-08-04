@@ -6,7 +6,7 @@ def check_items(data):
         raise ValidationError('Поле не может быть пустым.')
     unique_items = set(data)
     if len(data) != len(unique_items):
-        items = [item for item in unique_items if item in data]
+        items = [item for item in data if item in unique_items]
         raise ValidationError(
-            f'{items} уже добавлены.'
+            f'{items} уже созданы.'
         )

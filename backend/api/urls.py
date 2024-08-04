@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     FoodgramUserViewSet, IngredientViewSet, RecipeViewSet,
-    SubscriptionListView, TagViewSet,
+    TagViewSet,
 )
 
 
@@ -18,11 +18,6 @@ router.register('recipes', RecipeViewSet, basename='recipes')
 router.register('tags', TagViewSet, basename='tags')
 
 urlpatterns = [
-    path(
-        'users/subscriptions/',
-        SubscriptionListView.as_view(),
-        name='subscription-list'
-    ),
     path('auth/', include('djoser.urls.authtoken')),
     path('', include(router.urls)),
 ]
